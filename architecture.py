@@ -1,7 +1,6 @@
 """Recurrent Interface Network (RIN), but here it is named Tape."""
 
 import einops
-from architectures.convnet_blocks import DepthwiseConvBlock
 from architectures.transformers import add_vis_pos_emb
 from architectures.transformers import get_shape
 from architectures.transformers import MLP
@@ -158,14 +157,7 @@ class TapeDenoiser(tf.keras.layers.Layer):  # pylint: disable=missing-docstring
             use_mlp=True if tape_mlp_ratio > 0 else False,
             use_enc_ln=False,
             name=f'write_unit_{i}')
-        if conv_kernel_size == 0:
-          self.conv_units[str(i)] = lambda x, *args, **kwargs: x
-        else:
-          self.conv_units[str(i)] = DepthwiseConvBlock(
-              tape_dim,
-              kernel_size=conv_kernel_size,
-              dropout_rate=conv_drop_units,
-              name=f'conv_units_{i}')
+        self.conv_units[str(i)] = lambda x, *args, **kwargs: x
         self.latent_processing_units[str(i)] = TransformerEncoder(
             num_layers=num_layers_per_readwrite,
             dim=latent_dim,
