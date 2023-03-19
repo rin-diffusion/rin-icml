@@ -7,9 +7,41 @@ from architectures.transformers import get_shape
 from architectures.transformers import MLP
 from architectures.transformers import TransformerDecoder
 from architectures.transformers import TransformerEncoder
-from architectures.transunet import ScalarEmbedding
 import tensorflow as tf
 
+
+class ScalarEmbedding(tf.keras.layers.Layer):
+  """Scalar embedding layers.
+  Assume the first input dim to be time, and rest are optional features.
+  """
+
+  def __init__(self, dim, scaling, expansion=4, **kwargs):
+    super().__init__(**kwargs)
+    self.scalar_encoding = lambda x: positional_encoding(x*scaling, dim)
+    self.dense_0 = tf.keras.layers.Dense(
+        dim * expansion,
+        kernel_initializer=get_variable_initializer(1.),
+        name='dense0')
+    self.dense_1 = tf.keras.layers.Dense(
+        dim * expansion,
+        kernel_initializer=get_variable_initializer(1.),
+        name='dense1')
+
+  def call(self, x, last_swish=True, normalize=False):
+    y = None
+    if x.shape.rank > 1:
+      assert x.shape.rank == 2
+      x, y = x[..., 0], x[..., 1:]
+    x = self.scalar_encoding(x)[0]
+    if normalize:
+      x_mean = tf.reduce_mean(x, -1, keepdims=True)
+      x_std = tf.math.reduce_std(x, -1, keepdims=True)
+      x = (x - x_mean) / x_std
+    x = tf.nn.silu(self.dense_0(x))
+    x = x if y is None else tf.concat([x, y], -1)
+    x = self.dense_1(x)
+    return tf.nn.silu(x) if last_swish else x
+ 
 
 class TapeDenoiser(tf.keras.layers.Layer):  # pylint: disable=missing-docstring
   """This is an abstract class."""
