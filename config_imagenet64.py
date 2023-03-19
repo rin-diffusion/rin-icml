@@ -2,7 +2,7 @@
 
 # pylint: disable=invalid-name,line-too-long
 
-from configs.google.users.iamtingchen import config_diffusion_base as config_base
+import config_diffusion_base as config_base
 
 DATA_NAME = 'imagenet2012'
 ARCH_VARIANT = 'tape'
