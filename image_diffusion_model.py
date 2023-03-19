@@ -2,9 +2,8 @@
 
 import ml_collections
 
-from architectures.tape import ImageTapeDenoiser
-from architectures.transunet import TransUNet
-from models import diffusion_utils
+from tape import ImageTapeDenoiser
+import diffusion_utils
 from models import model as model_lib
 import tensorflow as tf
 
@@ -26,65 +25,36 @@ class Model(tf.keras.models.Model):
     else:
       self.x0_clip = config.x0_clip
     self.x_channels = 3
-    if config.arch_name == 'transunet':
-      if ',' in config.kernel_sizes:
-        kernel_sizes = [int(x) for x in config.kernel_sizes.split(',')]
-      else:
-        kernel_sizes = int(config.kernel_sizes)
-      m_kwargs = dict(
-          out_dim=self.x_channels,
-          dim=config.dim,
-          in_strides=config.in_strides,
-          in_kernel_size=config.in_kernel_size,
-          out_kernel_size=config.out_kernel_size,
-          kernel_sizes=kernel_sizes,
-          n_res_blocks=[int(x) for x in config.n_res_blocks.split(',')],
-          ch_multipliers=[int(x) for x in config.ch_multipliers.split(',')],
-          n_mlp_blocks=config.n_mlp_blocks,
-          dropout=config.udrop,
-          mhsa_resolutions=[int(x) for x in config.mhsa_resolutions.split(',')],
-          per_head_dim=config.per_head_dim,
-          transformer_dim=config.transformer_dim,
-          transformer_strides=config.transformer_strides,
-          transformer_blocks=config.transformer_blocks,
-          conditioning=False,
-          time_scaling=config.time_scaling,
-          pos_encoding=config.u_pos_encoding,
-          norm_type='group_norm',
-          name=config.arch_name)
-      self.denoiser = TransUNet(**m_kwargs)
-      self.denoiser_ema = TransUNet(**m_kwargs, trainable=False)
-    elif config.arch_name == 'tape':
-      m_kwargs = dict(
-          num_layers=config.num_layers,
-          latent_slots=config.latent_slots,
-          latent_dim=config.latent_dim,
-          latent_mlp_ratio=config.latent_mlp_ratio,
-          latent_num_heads=config.latent_num_heads,
-          tape_dim=config.tape_dim,
-          tape_mlp_ratio=config.tape_mlp_ratio,
-          rw_num_heads=config.rw_num_heads,
-          conv_kernel_size=config.conv_kernel_size,
-          conv_drop_units=config.conv_drop_units,
-          image_height=image_size,
-          image_width=image_size,
-          image_channels=self.x_channels,
-          patch_size=config.patch_size,
-          latent_pos_encoding=config.latent_pos_encoding,
-          tape_pos_encoding=config.tape_pos_encoding,
-          drop_path=config.drop_path,
-          drop_units=config.drop_units,
-          drop_att=config.drop_att,
-          time_scaling=config.time_scaling,
-          self_cond=config.self_cond,
-          time_on_latent=config.time_on_latent,
-          cond_on_latent_n=1 if config.cond_on_latent else 0,
-          cond_tape_writable=config.cond_tape_writable,
-          name=config.arch_name)
-      self.denoiser = ImageTapeDenoiser(**m_kwargs)
-      self.denoiser_ema = ImageTapeDenoiser(**m_kwargs, trainable=False)
-    else:
-      raise ValueError(f'Unknown architecture {config.arch_name}')
+
+    m_kwargs = dict(
+        num_layers=config.num_layers,
+        latent_slots=config.latent_slots,
+        latent_dim=config.latent_dim,
+        latent_mlp_ratio=config.latent_mlp_ratio,
+        latent_num_heads=config.latent_num_heads,
+        tape_dim=config.tape_dim,
+        tape_mlp_ratio=config.tape_mlp_ratio,
+        rw_num_heads=config.rw_num_heads,
+        conv_kernel_size=config.conv_kernel_size,
+        conv_drop_units=config.conv_drop_units,
+        image_height=image_size,
+        image_width=image_size,
+        image_channels=self.x_channels,
+        patch_size=config.patch_size,
+        latent_pos_encoding=config.latent_pos_encoding,
+        tape_pos_encoding=config.tape_pos_encoding,
+        drop_path=config.drop_path,
+        drop_units=config.drop_units,
+        drop_att=config.drop_att,
+        time_scaling=config.time_scaling,
+        self_cond=config.self_cond,
+        time_on_latent=config.time_on_latent,
+        cond_on_latent_n=1 if config.cond_on_latent else 0,
+        cond_tape_writable=config.cond_tape_writable,
+        name=config.arch_name)
+    self.denoiser = ImageTapeDenoiser(**m_kwargs)
+    self.denoiser_ema = ImageTapeDenoiser(**m_kwargs, trainable=False)
+
     # Obtain hidden shapes for latent self conditioning.
     self.hidden_shapes = getattr(self.denoiser, 'hidden_shapes', None)
     if self.hidden_shapes is not None:  # latent self-cond
